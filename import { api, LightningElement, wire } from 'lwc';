@@ -1,0 +1,134 @@
+import { api, LightningElement, wire } from 'lwc';
+import fetchCustType from '@salesforce/apex/FDDetailApex.fetchCustomerType';//We'are importing the apex class metod into js. //fetchCusType local name
+
+import {getPicklistValues, getObjectInfo} from 'lightning/uiObjectInfoApi';
+import FD_Details_Local from '@salesforce/schema/Fixed_Deposit_Details__c';
+import Deposit_Type_Local from '@salesforce/schema/Fixed_Deposit_Details__c.Deposit_Type__c';
+import Pay_Freq_Local from '@salesforce/schema/Fixed_Deposit_Details__c.Payout_Frequency__c';
+export default class SelectShemes extends LightningElement {
+    
+    customeroptions=[]    // we are using this in HTML
+    depTypeOptions=[]
+
+    @api recordId
+    @api objectApiName
+    @api objectInfo
+    
+    selectedCusType
+    selectedDepType
+    selectedTenorMonths
+    selectedTenorDays
+    selectedPayFreq
+
+    payoutFreqData
+    payFreqoptions
+    givenFdAmount
+
+
+    //Under Properties we will declare our wire metod
+    @wire(fetchCustType,{
+        recFdId: '$recordId'        //if we have any paremetres we will add this block
+    }) wiredCusType({data,error}){  //as a response we are having some return value
+        if(data){                   // if data is coming from the response implement the code block
+            let option=[];          // we are creating local variable of array type
+            option.push({label:data.Customer_Type__c, value : data.Customer_Type__c })  // with the push metod we are adding value
+            this.customeroptions=option // we are assigning customerOptions value
+            console.log('Customer Type is :::' + JSON.stringify(this.customeroptions));
+        } 
+        else if(error){
+            console.error('The error is '+ JSON.stringify(error));
+        }
+    }
+
+    cusTypeChange(event){
+        this.selectedCusType = event.detail.value;
+        console.log('Selected Value::' + event.detail.value) //we used detail instead of target couse we have the old data in detail
+    }
+    
+    @wire(getObjectInfo, {objectApiName: FD_Details_Local})
+    fdObjectInfo;
+
+    @wire(getPicklistValues, {fieldApiName: Deposit_Type_Local, recordTypeId: '$fdObjectInfo.data.defaultRecordTypeId'})
+    wiredDepData({data, error}){
+        if(data){
+            let option=[]
+            data.values.forEach(element=>{
+                option.push({label: element.label, value: element.value})
+            })
+            this.depTypeOptions = option
+            console.log('Deposit Type is :::' + JSON.stringify(this.depTypeOptions))
+
+        }
+        else if(error){
+            console.error('The error is: ' + JSON.stringify(error))
+        }
+
+    }
+
+    @wire(getPicklistValues, {fieldApiName: Pay_Freq_Local, recordTypeId: '$fdObjectInfo.data.defaultRecordTypeId'})
+    wiredPayData({data, error}){        //methot of the output
+        if(data){
+            this.payoutFreqData = data  //if I am getting data please put the data in the payoutFreqData property
+
+        }
+        else if(error){
+            console.error('The error is: ' + JSON.stringify(error))
+        }
+
+    }
+    depTypeChange(event){
+
+        this.selectedDepType = event.detail.value
+        console.log('Selected Deposit Type Value: ' + event.detail.value)
+
+    //create local variable
+    let key = this.payoutFreqData.controllervalues[event.detail.value]
+    this.payFreqoptions = this.payoutFreqData.values.filter(opt=>opt.validFor.includes(key));
+
+    }  
+    
+    payFreqChange(event){
+        this.selectedPayFreq = event.detail.value
+        console.log('Selected value: ' + event.detail.value)
+    }
+
+    get tenorMonthsoptions(){
+        let options = [];
+        /*
+        options.push({label: '1' ,value: '1' });
+        options.push({label: '2' ,value: '2' });
+*/
+    for(var counter=1; counter<=13 ;counter++){
+        options.push({label:counter.toString() ,value:counter.toString() }) //['1','2','3'.....]
+    }
+        return options;        
+    } 
+
+    tenorMonthChange(event){
+        this.selectedTenorMonths = event.detail.value
+        console.log('Selected Tenor in Months: ' + event.detail.value)
+    }
+
+    get tenorDaysoptions(){
+        let options = [];
+        /*
+    options.push({label : '1', value : '1'});
+    options.push({label : '2', value : '2'});
+    */
+    for(var c=1; c<32; c++){
+     options.push({label: c.toString(), value: c.toString()}) //['1','2','3',......]
+    }
+    return options;
+
+    }
+
+    tenorDayChange(event){
+        this.selectedTenorDays = event.detail.value
+        console.log('Selected Tenor in Days: ' + event.detail.value)
+    }
+    fdamountChange(event){
+        this.givenFdAmount = event.detail.value;
+        console.log('Written FD Amount: ' + event.detail.value)
+    }
+
+ 
